@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>İstanbul Haftalık Program</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--text:#1b2430;--muted:#667085;--line:#e4e7ec;--accent:#1f3a5f;--chip:#eef2f7;
+--fut:#1e8e3e;--bas:#d9661f;--vol:#2a6fdb;--warn-bg:#fff6e5;--warn:#8a5a00;--err-bg:#fdecec;--err:#a42020}
+@media (prefers-color-scheme:dark){:root{--bg:#0f141a;--card:#171e26;--text:#e6e9ee;--muted:#98a2b3;--line:#2a3340;
+--accent:#8fb3e8;--chip:#222b36;--fut:#4cc26f;--bas:#f0954f;--vol:#6ea0f5;--warn-bg:#2d2414;--warn:#f0c46c;--err-bg:#331a1a;--err:#f08f8f}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1100px;margin:0 auto;padding:20px 16px 60px}
+header h1{margin:0 0 4px;font-size:24px}
+header p{margin:0;color:var(--muted);font-size:13px}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:18px 0 10px}
+.seg{display:inline-flex;background:var(--chip);border-radius:10px;padding:3px}
+.seg button{border:0;background:none;color:var(--text);padding:7px 14px;border-radius:8px;font:inherit;cursor:pointer}
+.seg button.on{background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.12);font-weight:600}
+.chip{border:1px solid var(--line);background:var(--card);color:var(--text);padding:6px 12px;border-radius:999px;font:inherit;font-size:13px;cursor:pointer}
+.chip.on{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+input[type=search]{flex:1;min-width:180px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--text);font:inherit}
+a.btn{margin-left:auto;text-decoration:none;background:var(--accent);color:var(--bg);padding:8px 14px;border-radius:10px;font-weight:600;font-size:14px;white-space:nowrap}
+.alert{background:var(--warn-bg);color:var(--warn);border-radius:10px;padding:10px 14px;font-size:13px;margin:8px 0}
+.alert.err{background:var(--err-bg);color:var(--err)}
+.day{margin-top:22px}
+.day h2{font-size:15px;margin:0 0 8px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+.list{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.row{display:grid;grid-template-columns:62px 1fr;gap:12px;padding:11px 14px;border-top:1px solid var(--line)}
+.row:first-child{border-top:0}
+.t{font-weight:700;font-variant-numeric:tabular-nums}
+.m{font-weight:600}
+.s{color:var(--muted);font-size:13px;margin-top:2px}
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:6px;margin-right:6px;color:#fff;vertical-align:1px}
+.Futbol{background:var(--fut)}.Basketbol{background:var(--bas)}.Voleybol{background:var(--vol)}.ev{background:var(--muted)}
+.empty{color:var(--muted);padding:30px 0;text-align:center}
+details{margin-top:30px;font-size:13px;color:var(--muted)}
+details table{border-collapse:collapse;margin-top:8px;width:100%}
+details td{border-top:1px solid var(--line);padding:6px 8px;vertical-align:top}
+.row a{color:inherit}
+@media (max-width:600px){a.btn{margin-left:0;width:100%;text-align:center}.row{grid-template-columns:50px 1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>İstanbul Haftalık Program</h1>
+  <p id="upd"></p>
+</header>
+<div class="bar"><div class="seg" id="weeks"></div><div class="seg" id="kind"></div></div>
+<div class="bar" id="filters"></div>
+<div class="bar"><input type="search" id="q" placeholder="Takım, salon, etkinlik ara…"><a class="btn" id="xls" href="#">Excel indir</a></div>
+<div id="alerts"></div>
+<div id="out"></div>
+<details><summary>Veri kaynakları</summary><table id="src"></table></details>
+</div>
+<script>
+const VERI = /*__VERI__*/null;
+const GUN=["Pazar","Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi"];
+const AY=["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
+let st={w:0,k:"maclar",f:"Tümü",q:""};
+try{const s=JSON.parse(localStorage.getItem("ist-prog")||"{}");if(s.k)st.k=s.k;}catch(e){}
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const low=s=>String(s??"").toLocaleLowerCase("tr");
+function seg(el,items,cur,cb){el.innerHTML="";items.forEach(([v,l])=>{const b=document.createElement("button");b.textContent=l;if(v===cur)b.className="on";b.onclick=()=>cb(v);el.appendChild(b);});}
+function render(){
+  const H=VERI.haftalar[st.w];
+  seg($("weeks"),VERI.haftalar.map((h,i)=>[i,`${h.ad} · ${h.etiket}`]),st.w,v=>{st.w=v;st.f="Tümü";render();});
+  seg($("kind"),[["maclar",`Maçlar (${H.maclar.length})`],["etkinlikler",`Etkinlikler (${H.etkinlikler.length})`]],st.k,v=>{st.k=v;st.f="Tümü";try{localStorage.setItem("ist-prog",JSON.stringify({k:v}))}catch(e){};render();});
+  const rows=H[st.k], key=st.k==="maclar"?"Branş":"Kategori";
+  const cats=["Tümü",...new Set(rows.map(r=>r[key]))];
+  $("filters").innerHTML="";cats.forEach(c=>{const b=document.createElement("button");b.className="chip"+(c===st.f?" on":"");
+    b.textContent=c==="Tümü"?`Tümü (${rows.length})`:`${c} (${rows.filter(r=>r[key]===c).length})`;b.onclick=()=>{st.f=c;render();};$("filters").appendChild(b);});
+  $("xls").href=H.excel;
+  const bad=H.durum.filter(d=>d[1].startsWith("HATA"));
+  const manual=H.durum.filter(d=>d[1]!=="OK"&&!d[1].startsWith("HATA"));
+  $("alerts").innerHTML=(bad.length?`<div class="alert err"><b>Bu kaynaktan veri alınamadı:</b> ${bad.map(d=>esc(d[0])).join(", ")}. Bu güncellemede eksik olabilir.</div>`:"")+
+    (st.k==="maclar"?`<div class="alert"><b>Listede yok, elle kontrol edin:</b> ${manual.map(d=>esc(d[0])).join(" · ")}</div>`:"");
+  const q=low(st.q);
+  const list=rows.filter(r=>(st.f==="Tümü"||r[key]===st.f)&&(!q||low(Object.values(r).join(" ")).includes(q)));
+  if(!list.length){$("out").innerHTML='<div class="empty">Kayıt bulunamadı.</div>';}
+  else{
+    const by={};list.forEach(r=>(by[r.Tarih]=by[r.Tarih]||[]).push(r));
+    $("out").innerHTML=Object.keys(by).sort().map(d=>{const D=new Date(d+"T12:00:00");
+      return `<div class="day"><h2>${D.getDate()} ${AY[D.getMonth()]} ${GUN[D.getDay()]}</h2><div class="list">`+
+      by[d].map(r=>st.k==="maclar"?
+        `<div class="row"><div class="t">${esc(r.Saat)}</div><div><div class="m"><span class="tag ${esc(r["Branş"])}">${esc(r["Branş"])}</span>${esc(r["Maç"])}</div><div class="s">${esc(r["Salon / Stat"])} · ${esc(r.Organizasyon)}${r.Not?" · "+esc(r.Not):""}</div></div></div>`:
+        `<div class="row"><div class="t">${esc(r.Saat)}</div><div><div class="m"><span class="tag ev">${esc(r.Kategori)}</span><a href="${esc(r.Link)}" target="_blank" rel="noopener">${esc(r.Etkinlik)}</a></div><div class="s">${esc(r.Mekan)}${r.Not?" · "+esc(r.Not):""}</div></div></div>`
+      ).join("")+"</div></div>";}).join("");
+  }
+  $("src").innerHTML=H.durum.map(d=>`<tr><td>${esc(d[0])}</td><td>${esc(d[1])}</td><td>${esc(d[2])}</td></tr>`).join("");
+}
+$("upd").textContent="Son güncelleme: "+VERI.guncelleme+" · Her gün sabah otomatik güncellenir";
+$("q").oninput=e=>{st.q=e.target.value;render();};
+render();
+</script>
+</body>
+</html>
